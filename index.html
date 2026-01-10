@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAI SD (Quiz + Ulangan + Absensi)</title>
+
+<style>
+:root{
+    --primary:#2E8B57;
+    --danger:#e74c3c;
+    --light:#F0FFF0;
+    --white:#ffffff;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI',sans-serif;
+}
+
+body{
+    background:var(--light);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    padding:10px;
+}
+
+.app{
+    background:var(--white);
+    width:100%;
+    max-width:750px;
+    border-radius:12px;
+    box-shadow:0 4px 16px rgba(0,0,0,.15);
+    overflow:hidden;
+}
+
+header{
+    background:var(--primary);
+    color:white;
+    padding:18px;
+    text-align:center;
+}
+
+.screen{
+    display:none;
+    padding:18px;
+    min-height:460px;
+}
+
+.screen.active{
+    display:block;
+}
+
+button{
+    width:100%;
+    padding:10px;
+    margin-top:6px;
+    border:none;
+    border-radius:6px;
+    font-weight:bold;
+    color:white;
+    cursor:pointer;
+    background:var(--primary);
+}
+
+button.danger{
+    background:var(--danger);
+}
+
+input,select{
+    width:100%;
+    padding:8px;
+    border:2px solid #ddd;
+    border-radius:6px;
+    margin-bottom:8px;
+}
+
+.option{
+    border:2px solid #ccc;
+    padding:10px;
+    border-radius:6px;
+    margin:6px 0;
+    cursor:pointer;
+}
+
+.option.selected{
+    background:var(--primary);
+    border-color:var(--primary);
+    color:white;
+}
+
+/* ABSENSI MODE 2 */
+td.abs-h{background:#c8f7c5;color:#000;font-weight:bold;} /* H */
+td.abs-i{background:#c5d8f7;color:#000;font-weight:bold;} /* I */
+td.abs-s{background:#e7c5f7;color:#000;font-weight:bold;} /* S */
+td.abs-a{background:#f7c5c5;color:#000;font-weight:bold;} /* A */
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:10px;
+}
+
+th,td{
+    border:1px solid #ccc;
+    padding:4px;
+    text-align:center;
+}
+
+.question-card{
+    background:#fafafa;
+    border-left:5px solid gold;
+    padding:12px;
+    border-radius:6px;
+    margin-bottom:10px;
+}
+
+.score{
+    font-size:2.5rem;
+    font-weight:bold;
+    text-align:center;
+    margin:18px 0;
+}
+
+.link{
+    text-align:center;
+    margin-top:8px;
+}
+.link a{
+    color:#333;
+    text-decoration:none;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+<header>
+    <h2>PAI SD</h2>
+    <p>3A • 3B • 4A • 4B</p>
+</header>
+<!-- ====================== SCREEN LOGIN ====================== -->
+<div id="login" class="screen active">
+
+    <label>Nama Siswa:</label>
+    <input id="inputNama" type="text" placeholder="Masukkan nama...">
+
+    <label>Pilih Kelas:</label>
+    <select id="inputKelas">
+        <option value="">-- Pilih --</option>
+        <option value="3A">Kelas 3A</option>
+        <option value="3B">Kelas 3B</option>
+        <option value="4A">Kelas 4A</option>
+        <option value="4B">Kelas 4B</option>
+    </select>
+
+    <small id="loginErr" style="color:red;display:none;"></small>
+
+    <button onclick="mulaiQuiz()">Mulai Quiz</button>
+    <button onclick="mulaiUlangan()">Mulai Ulangan CBT</button>
+    <button onclick="toggleMusik()">Musik ON/OFF</button>
+    <button onclick="openAdmin()">Menu Admin</button>
+
+    <div class="link">
+        <a href="#" onclick="credit()">Tentang Aplikasi</a>
+    </div>
+
+    <audio id="bgMusic" loop src="ala.mp3"></audio>
+</div>
+
+
+<!-- ====================== SCREEN QUIZ ====================== -->
+<div id="quizScreen" class="screen">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span id="quizProgress">Soal 1/?</span>
+        <span id="quizKelas" style="font-weight:bold;color:var(--primary);"></span>
+    </div>
+
+    <div class="question-card">
+        <div id="quizTeks"></div>
+    </div>
+
+    <div id="quizOpsi"></div>
+    <button id="quizNext" onclick="lanjutQuiz()" disabled>Selanjutnya</button>
+</div>
+
+
+<!-- ====================== SCREEN QUIZ SELESAI ====================== -->
+<div id="quizDone" class="screen">
+    <h3>Quiz Selesai!</h3>
+    <h4 id="quizNamaShow"></h4>
+    <div id="quizSkor" class="score"></div>
+    <button onclick="gotoLogin()">Kembali ke Menu</button>
+</div>
+
+
+<!-- ====================== SCREEN ULANGAN CBT ====================== -->
+<div id="ulanganScreen" class="screen">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span id="ulProg">Soal 1/?</span>
+        <span id="ulKelas" style="font-weight:bold;color:var(--primary);"></span>
+    </div>
+
+    <div class="question-card">
+        <div id="ulTeks"></div>
+    </div>
+
+    <div id="ulOpsi"></div>
+    <button id="ulNext" onclick="lanjutUlangan()" disabled>Selanjutnya</button>
+</div>
+
+
+<!-- ====================== SCREEN ULANGAN SELESAI ====================== -->
+<div id="ulanganDone" class="screen">
+    <h3>Ulangan Selesai!</h3>
+    <h4 id="ulNamaShow"></h4>
+    <div id="ulSkor" class="score"></div>
+    <button onclick="gotoLogin()">Kembali ke Menu</button>
+</div>
+
+
+<!-- ====================== SCREEN ADMIN ====================== -->
+<div id="adminScreen" class="screen">
+    <h3>ADMIN PANEL</h3>
+    <div id="adminPilihKelas"></div>
+    <div id="adminKonten"></div>
+    <button class="danger" onclick="resetSemuaData()">Reset Semua Data</button>
+    <button onclick="gotoLogin()">Kembali</button>
+</div>
+<script>
+/* ============================
+      VARIABEL GLOBAL
+=============================*/
+const PASS_ADMIN = "040698";
+let namaSiswa = "";
+let kelasSiswa = "";
+let indexSoal = 0;
+let nilai = 0;
+
+const data = {
+    absensi:{},
+    siswa:{},
+    quiz:[],
+    ulangan:[]
+};
+
+const SIMPAN = () => localStorage.setItem("paiData", JSON.stringify(data));
+const MUAT = () => {
+    let d = JSON.parse(localStorage.getItem("paiData"));
+    if(d){
+        if(d.absensi) data.absensi = d.absensi;
+        if(d.siswa) data.siswa = d.siswa;
+        if(d.quiz) data.quiz = d.quiz;
+        if(d.ulangan) data.ulangan = d.ulangan;
+    }
+};
+MUAT();
+
+/* ============================
+      DATA SOAL KELAS 3
+=============================*/
+const soalKelas3 = [
+{q:"Bulan Ramadhan adalah bulan yang diwajibkan umat Islam untuk berpuasa. Bulan tersebut adalah ...",opts:["Syawal","Rajab","Ramadhan","Dzulhijjah"],a:2},
+{q:"Pada bulan Ramadhan, umat Islam diperintahkan berpuasa dari terbit fajar sampai terbenam matahari. Kewajiban ini termasuk dalam rukun Islam yang ke ...",opts:["Pertama","Kedua","Ketiga","Keempat"],a:2},
+{q:"Salah satu keutamaan bulan Ramadhan adalah dibukanya pintu-pintu surga. Keutamaan ini menunjukkan bahwa Ramadhan adalah bulan penuh ...",opts:["Musibah","Berkah","Kesedihan","Permainan"],a:1},
+{q:"Di bulan Ramadhan, umat Islam memperbanyak membaca Al-Qur'an. Kegiatan ini disebut ...",opts:["Murajaah","Tadarus","Taqarrub","Hajatan"],a:1},
+{q:"Umat Islam melaksanakan shalat sunnah khusus pada malam hari bulan Ramadhan. Shalat ini disebut shalat ...",opts:["Shubuh","Istikharah","Tarawih","Dhuha"],a:2},
+{q:"Berbuka puasa adalah kegiatan yang dilakukan setelah matahari terbenam. Sunnah ketika berbuka adalah menyantap ...",opts:["Air dingin","Kurma","Roti","Buah apel"],a:1},
+{q:"Dalam bulan Ramadhan terdapat satu malam yang lebih baik dari seribu bulan. Malam istimewa ini disebut ...",opts:["Nuzulul Quran","Lailatul Qadar","Isra Mi'raj","Idul Fitri"],a:1},
+{q:"Selama bulan Ramadhan, umat Islam dianjurkan untuk banyak bersedekah. Salah satunya dengan memberikan makanan berbuka kepada ...",opts:["Orang kaya","Tetangga saja","Orang lain yang berpuasa","Orang yang tidak dikenal"],a:2},
+{q:"Niat puasa Ramadhan dianjurkan untuk dibaca sebelum waktu Subuh. Waktu ini disebut juga waktu ...",opts:["Imsak","Zuhur","Ashar","Isya"],a:0},
+{q:"Umat Islam yang tidak sanggup berpuasa karena sakit atau perjalanan jauh diperbolehkan ...",opts:["Membatalkan puasa dan menggantinya di hari lain","Tetap berpuasa meski lemah","Tidak makan tetapi minum saja","Tidak perlu puasa seumur hidup"],a:0},
+
+{q:"Salah satu tujuan berpuasa di bulan Ramadhan adalah melatih diri untuk bersabar dan menahan hawa nafsu. Hal ini bertujuan agar seorang muslim dapat menjadi pribadi yang lebih ...",opts:["Sombong","Boros","Taqwa","Marah"],a:2},
+{q:"Orang yang berpuasa dilarang melakukan hal-hal yang dapat membatalkan puasanya. Salah satu contohnya adalah ...",opts:["Makan dan minum dengan sengaga","Bernafas","Tidur siang","Tersenyum"],a:0},
+{q:"Bulan Ramadhan juga disebut sebagai bulan diturunkannya Al-Qur'an pertama kali. Peristiwa ini dikenal sebagai ...",opts:["Hijrah","Isra Mi'raj","Nuzulul Quran","Hajjatul Wada"],a:2},
+{q:"Ketika sahur, umat Islam dianjurkan untuk makan dan minum agar kuat menjalani puasa. Waktu sahur dilakukan sebelum masuk waktu ...",opts:["Maghrib","Subuh","Isya","Zuhur"],a:1},
+{q:"Pada bulan Ramadhan, umat Islam biasanya melakukan tadarus Al-Qur'an bersama di masjid atau di rumah. Kegiatan ini bertujuan untuk ...",opts:["Menambah hafalan","Menambah pahala","Menghindari kebosanan","Menjaga kesehatan"],a:1},
+{q:"Anak kecil yang belum baligh biasanya belum diwajibkan berpuasa. Namun jika ia ikut berpuasa maka hal tersebut termasuk perbuatan yang ...",opts:["Tidak ada manfaat","Buruk","Terpuji","Dilarang"],a:2},
+{q:"Di akhir bulan Ramadhan, umat Islam diwajibkan memberikan zakat fitrah. Zakat fitrah diberikan kepada ...",opts:["Orang yang mampu","Orang yang kaya","Orang yang membutuhkan","Anak sekolah"],a:2},
+{q:"Zakat fitrah bertujuan untuk menyucikan orang yang berpuasa dan membantu orang-orang fakir miskin. Zakat ini wajib ditunaikan sebelum ...",opts:["Shalat Dzuhur","Shalat Jumat","Shalat Idul Fitri","Shalat Tarawih"],a:2},
+{q:"Idul Fitri adalah hari raya umat Islam setelah berpuasa selama sebulan penuh. Pada hari tersebut umat Islam saling memaafkan dan mempererat ...",opts:["Perselisihan","Permusuhan","Silahturahmi","Pertengkaran"],a:2},
+{q:"Ketika Idul Fitri, umat Islam melaksanakan shalat Id secara berjamaah. Shalat Id biasanya dilakukan di ...",opts:["Masjid atau lapangan","Kamar tidur","Kantin sekolah","Rumah sakit"],a:0},
+
+{q:"Berpuasa di bulan Ramadhan mengajarkan untuk peka terhadap keadaan orang lain. Sikap ini menumbuhkan rasa ...",opts:["Sombong","Peduli","Acuh","Marah"],a:1},
+{q:"Puasa Ramadhan dimulai dengan niat. Niat puasa Ramadhan boleh dilafalkan tetapi yang terpenting adalah niat dalam ...",opts:["Hati","Kelas","Buku","Lisan orang lain"],a:0},
+{q:"Saat berpuasa, menjaga ucapan dan perbuatan juga penting agar tidak mengurangi pahala puasa. Contoh perbuatan yang sebaiknya dihindari adalah ...",opts:["Berkata jujur","Membantu orang lain","Mengaji","Berkelahi"],a:3},
+{q:"Di bulan Ramadhan, banyak umat Islam memperbanyak doa dan istighfar. Hal ini dilakukan untuk mendapatkan ...",opts:["Hadiah","Pahala dan ampunan","Popularitas","Kemalasan"],a:1},
+{q:"Berbuka puasa dianjurkan untuk tidak berlebihan dalam makan dan minum. Hal ini bertujuan agar tubuh tetap ...",opts:["Lemah","Sehat","Sakit","Lapar"],a:1},
+{q:"Ketika puasa, menahan diri dari amarah juga penting. Nabi Muhammad mengajarkan bahwa orang yang kuat adalah orang yang dapat ...",opts:["Membalas pukulan","Menang adu tinju","Menahan amarah","Berteriak"],a:2},
+{q:"Puasa Ramadhan mengajarkan rasa syukur atas nikmat Allah. Orang yang bersyukur akan ...",opts:["Menghina nikmat","Membenci nikmat","Menjaga nikmat","Mengabaikan nikmat"],a:2},
+{q:"Di malam 10 hari terakhir Ramadhan banyak umat Islam melakukan ibadah secara lebih sungguh-sungguh. Hal ini karena mengharap bertemu ...",opts:["Nuzulul Quran","Isra Mi'raj","Lailatul Qadar","Idul Adha"],a:2},
+{q:"Nuzulul Quran adalah peristiwa turunnya Al-Qur'an pertama kali. Peristiwa ini terjadi di bulan ...",opts:["Ramadhan","Syawal","Rajab","Muharram"],a:0},
+{q:"Orang yang tidak mampu mengganti puasa di hari lain wajib membayar fidyah. Fidyah diberikan dalam bentuk ...",opts:["Makanan pokok","Hadiah","Mainan","Uang saku siswa"],a:0}
+];
+
+/* ============================
+      DATA SOAL KELAS 4
+=============================*/
+const soalKelas4 = [
+{q:"Baligh adalah keadaan ...",opts:["Meninggalkan ibadah sama sekali","Siap bekerja","Siap menikah langsung","Memikul kewajiban agama"],a:3},
+{q:"Tanda baligh laki-laki adalah ...",opts:["Sakit","Masih kecil","Mulai baligh","Tidak normal"],a:2},
+{q:"Tanda baligh perempuan adalah ...",opts:["Tetap anak-anak","Siap menanggung kewajiban agama","Tidak perlu shalat","Boleh tidak berpuasa"],a:1},
+{q:"Anak baligh wajib shalat karena shalat adalah ...",opts:["Hobi","Kewajiban bagi muslim","Pilihan pribadi","Permainan"],a:1},
+{q:"Selain shalat, anak yang sudah baligh wajib berpuasa bulan ...",opts:["Syawal","Ramadhan","Muharram","Rajab"],a:1},
+{q:"Baligh terkait akhlak dan tanggung jawab untuk ...",opts:["Bersikap dewasa","Selalu bermain","Meremehkan orang lain","Berbuat semaunya"],a:0},
+{q:"Setelah baligh, amal dicatat oleh ...",opts:["Manusia","Malaikat","Guru","Teman"],a:1},
+{q:"Malaikat pencatat baik adalah ...",opts:["Jibril","Mikail","Raqib","Munkar"],a:2},
+{q:"Malaikat pencatat buruk adalah ...",opts:["Atid","Israfil","Izrail","Ridwan"],a:0},
+{q:"Menjelang baligh harus menjaga diri, misalnya ...",opts:["Berpakaian sopan","Berbicara kasar","Berbohong","Sombong"],a:0},
+
+{q:"Hijrah adalah perpindahan Nabi dari Makkah ke ...",opts:["Thaif","Yaman","Madinah","Mesir"],a:2},
+{q:"Hijrah karena tekanan Quraisy, agar Muslim ...",opts:["Lebih aman","Lebih berbahaya","Lebih sulit","Tanpa penduduk"],a:0},
+{q:"Hijrah menjadi awal terbentuknya ...",opts:["Negara Islam Madinah","Perang Badar","Perjanjian Hudaibiyah","Haji Wada"],a:0},
+{q:"Tahun hijrah jadi awal ...",opts:["Hijriah","Jawa","Masehi","China"],a:0},
+{q:"Saat hijrah Nabi ditemani ...",opts:["Umar","Utsman","Ali","Abu Bakar"],a:3},
+{q:"Allah menjaga Nabi di Gua Tsur, artinya Allah ...",opts:["Mengabaikan","Menjaga hamba bertaqwa","Menyuruh lari","Tidak peduli"],a:1},
+{q:"Sesampainya di Madinah dibangun Masjid ...",opts:["Quba","Haram","Aqsa","Agung"],a:0},
+{q:"Masjid Quba untuk ...",opts:["Berdagang","Ibadah","Bermain","Istirahat"],a:1},
+{q:"Masjid Nabawi pusat ...",opts:["Olahraga","Pemerintahan & pendidikan","Musik","Belanja"],a:1},
+{q:"Hijrah mengajarkan ...",opts:["Kemalasan","Permusuhan","Keteguhan & optimis","Putus asa"],a:2},
+
+{q:"Yang menyambut Nabi di Madinah adalah ...",opts:["Muhajirin","Yahudi","Nasrani","Anshar"],a:3},
+{q:"Yang ikut dari Makkah disebut ...",opts:["Anshar","Arab","Nasrani","Muhajirin"],a:3},
+{q:"Muhajirin & Anshar contoh ...",opts:["Perselisihan","Kesombongan","Persaudaraan","Permusuhan"],a:2},
+{q:"Hijrah bukan hanya pindah tempat tapi pindah menuju ...",opts:["Kesombongan","Kebaikan","Kerusakan","Permusuhan"],a:1},
+{q:"Baligh mengajarkan anak untuk menjaga ...",opts:["Shalat","Sopan santun","Kebersihan","Semua benar"],a:3},
+{q:"Anak baligh harus menjaga adab seperti ...",opts:["Berbicara sopan","Menertawakan teman","Menghina","Mengejek guru"],a:0},
+{q:"Hijrah mengajarkan perubahan lewat ...",opts:["Diam","Putus asa","Usaha & tawakal","Mengeluh"],a:2},
+{q:"Baligh bukan hanya fisik tapi juga ...",opts:["Adab & ilmu","TV","Main game","Tidur"],a:0},
+{q:"Hijrah mempersatukan umat lewat ...",opts:["Keributan","Permusuhan","Persaudaraan","Jarak"],a:2},
+{q:"Allah mencintai hamba yang ...",opts:["Bertaqwa","Pemarah","Pembohong","Sombong"],a:0}
+];
+
+/* ============================
+      FUNCTIONS QUIZ
+=============================*/
+function mulaiQuiz(){
+    const n = inputNama.value.trim();
+    const k = inputKelas.value;
+    if(!n || !k){
+        loginErr.style.display="block";
+        loginErr.innerText="Nama & Kelas wajib diisi!";
+        return;
+    }
+    namaSiswa=n;
+    kelasSiswa=k;
+    autoHadir(n,k);
+    indexSoal=0;
+    nilai=0;
+    soalAktif = (k==="3A"||k==="3B") ? soalKelas3 : soalKelas4;
+    tampilSoalQuiz();
+}
+
+function tampilSoalQuiz(){
+    quizScreen.classList.add("active");
+    login.classList.remove("active");
+    quizProgress.innerText=`Soal ${indexSoal+1}/${soalAktif.length}`;
+    quizKelas.innerText=`${kelasSiswa}`;
+
+    let s=soalAktif[indexSoal];
+    quizTeks.innerText=s.q;
+
+    quizOpsi.innerHTML="";
+    quizNext.disabled=true;
+    s.opts.forEach((o,i)=>{
+        let div=document.createElement("div");
+        div.className="option";
+        div.innerText=o;
+        div.onclick=()=>{
+            document.querySelectorAll("#quizOpsi .option").forEach(e=>e.classList.remove("selected"));
+            div.classList.add("selected");
+            div.dataset.index=i;
+            quizNext.disabled=false;
+        };
+        quizOpsi.appendChild(div);
+    });
+}
+
+function lanjutQuiz(){
+    let pilih = document.querySelector("#quizOpsi .selected");
+    if(pilih && parseInt(pilih.dataset.index)===soalAktif[indexSoal].a) nilai+=10;
+
+    indexSoal++;
+    if(indexSoal<soalAktif.length){
+        tampilSoalQuiz();
+    } else {
+        selesaiQuiz();
+    }
+}
+
+function selesaiQuiz(){
+    data.quiz.push({
+        nama:namaSiswa,
+        kelas:kelasSiswa,
+        nilai:nilai,
+        waktu:new Date().toLocaleString()
+    });
+    SIMPAN();
+    quizScreen.classList.remove("active");
+    quizDone.classList.add("active");
+    quizNamaShow.innerText=`${namaSiswa} (${kelasSiswa})`;
+    quizSkor.innerText=nilai;
+}
+
+
+/* ============================
+      FUNCTIONS ULANGAN
+=============================*/
+let soalAktif=[];
+function mulaiUlangan(){
+    const n = inputNama.value.trim();
+    const k = inputKelas.value;
+    if(!n || !k){
+        loginErr.style.display="block";
+        loginErr.innerText="Nama & Kelas wajib diisi!";
+        return;
+    }
+    namaSiswa=n;
+    kelasSiswa=k;
+    autoHadir(n,k);
+    indexSoal=0;
+    nilai=0;
+    soalAktif = (k==="3A"||k==="3B") ? soalKelas3 : soalKelas4;
+    tampilSoalUlangan();
+}
+
+function tampilSoalUlangan(){
+    ulanganScreen.classList.add("active");
+    login.classList.remove("active");
+    ulProg.innerText=`Soal ${indexSoal+1}/${soalAktif.length}`;
+    ulKelas.innerText=`${kelasSiswa}`;
+
+    let s=soalAktif[indexSoal];
+    ulTeks.innerText=s.q;
+
+    ulOpsi.innerHTML="";
+    ulNext.disabled=true;
+    s.opts.forEach((o,i)=>{
+        let div=document.createElement("div");
+        div.className="option";
+        div.innerText=o;
+        div.onclick=()=>{
+            document.querySelectorAll("#ulOpsi .option").forEach(e=>e.classList.remove("selected"));
+            div.classList.add("selected");
+            div.dataset.i=i;
+            ulNext.disabled=false;
+        };
+        ulOpsi.appendChild(div);
+    });
+}
+
+function lanjutUlangan(){
+    let pilih=document.querySelector("#ulOpsi .selected");
+    if(pilih && parseInt(pilih.dataset.i)===soalAktif[indexSoal].a) nilai+=10;
+
+    indexSoal++;
+    if(indexSoal<soalAktif.length){
+        tampilSoalUlangan();
+    } else selesaiUlangan();
+}
+
+function selesaiUlangan(){
+    data.ulangan.push({
+        nama:namaSiswa,
+        kelas:kelasSiswa,
+        nilai:nilai,
+        waktu:new Date().toLocaleString()});
+    SIMPAN();
+    ulanganScreen.classList.remove("active");
+    ulanganDone.classList.add("active");
+    ulNamaShow.innerText=`${namaSiswa} (${kelasSiswa})`;
+    ulSkor.innerText=nilai;
+}
+/* ============================
+    MUSIK & NAVIGASI
+=============================*/
+function toggleMusik(){
+    let m = bgMusic;
+    if(m.paused) m.play(); else m.pause();
+}
+
+function gotoLogin(){
+    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+    login.classList.add("active");
+}
+
+/* ============================
+    AUTO ABSENSI MODE 2
+=============================*/
+function autoHadir(nama,kelas){
+    if(!data.siswa[kelas]) data.siswa[kelas]=[];
+    if(!data.siswa[kelas].includes(nama)) data.siswa[kelas].push(nama);
+
+    if(!data.absensi[kelas]) data.absensi[kelas]={};
+    if(!data.absensi[kelas][nama]) data.absensi[kelas][nama]=Array(30).fill("");
+
+    let d = new Date().getDate();
+    if(d>30) d=30;
+    data.absensi[kelas][nama][d-1] = "H";
+    SIMPAN();
+}
+
+/* ============================
+    ADMIN PANEL MODE C
+=============================*/
+function openAdmin(){
+    let p = prompt("Masukkan password:");
+    if(p===PASS_ADMIN){
+        adminScreen.classList.add("active");
+        login.classList.remove("active");
+        muatMenuKelas();
+    }
+}
+
+function muatMenuKelas(){
+    let html="";
+    ["3A","3B","4A","4B"].forEach(k=>{
+        html+=`<button onclick="lihatKelas('${k}')">${k}</button>`;
+    });
+    adminPilihKelas.innerHTML = html;
+    adminKonten.innerHTML = "";
+}
+
+function lihatKelas(kls){
+    let siswa = data.siswa[kls] || [];
+    let abs = data.absensi[kls] || {};
+
+    let html=`<h3>Kelas ${kls}</h3>`;
+
+    /* ==== ABSENSI ==== */
+    html+=`<h4>Absensi (Klik sel untuk ubah)</h4>`;
+    html+=`<table><tr><th>Nama</th>`;
+    for(let i=1;i<=30;i++) html+=`<th>${i}</th>`;
+    html+=`</tr>`;
+
+    siswa.forEach(n=>{
+        html+=`<tr><td>${n}</td>`;
+        let row = abs[n] || Array(30).fill("");
+        row.forEach((status,hari)=>{
+            let cls="";
+            if(status==="H") cls="abs-h";
+            if(status==="I") cls="abs-i";
+            if(status==="S") cls="abs-s";
+            if(status==="A") cls="abs-a";
+            html+=`<td class="${cls}" onclick="editAbsensi('${kls}','${n}',${hari})">${status}</td>`;
+        });
+        html+=`</tr>`;
+    });
+    html+=`</table>`;
+
+    /* ==== REKAP QUIZ ==== */
+    html+=`<h4>Rekap Quiz</h4>`;
+    html+=`<table><tr><th>Nama</th><th>Nilai</th><th>Waktu</th></tr>`;
+    data.quiz.filter(r=>r.kelas===kls).forEach(r=>{
+        html+=`<tr><td>${r.nama}</td><td>${r.nilai}</td><td>${r.waktu}</td></tr>`;
+    });
+    html+=`</table>`;
+
+    /* ==== REKAP ULANGAN ==== */
+    html+=`<h4>Rekap Ulangan CBT</h4>`;
+    html+=`<table><tr><th>Nama</th><th>Nilai</th><th>Waktu</th></tr>`;
+    data.ulangan.filter(r=>r.kelas===kls).forEach(r=>{
+        html+=`<tr><td>${r.nama}</td><td>${r.nilai}</td><td>${r.waktu}</td></tr>`;
+    });
+    html+=`</table>`;
+
+    adminKonten.innerHTML = html;
+}
+
+/* ============================
+    EDIT ABSENSI MODE 2
+=============================*/
+function editAbsensi(kls,nama,hari){
+    let s = prompt("Masukkan status (H/I/S/A):","H");
+    if(!["H","I","S","A"].includes(s)) return;
+    data.absensi[kls][nama][hari]=s;
+    SIMPAN();
+    lihatKelas(kls);
+}
+
+/* ============================
+    RESET DATA
+=============================*/
+function resetSemuaData(){
+    if(confirm("Yakin reset semua data?")){
+        localStorage.removeItem("paiData");
+        location.reload();
+    }
+}
+
+/* ============================
+    TENTANG APLIKASI
+=============================*/
+function credit(){
+    alert("Aplikasi PAI SD\nQuiz + Ulangan CBT + Absensi\nBuild mode: LocalStorage Offline");
+}
+
+</script>
+</div>
+</body>
+</html>
