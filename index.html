@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAI SD</title>
+
+<style>
+:root{
+    --primary:#2E8B57;
+    --danger:#e74c3c;
+    --light:#F0FFF0;
+    --white:#ffffff;
+}
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI',sans-serif;
+}
+body{
+    background:var(--light);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    padding:10px;
+}
+.app{
+    background:var(--white);
+    width:100%;
+    max-width:750px;
+    border-radius:12px;
+    box-shadow:0 4px 16px rgba(0,0,0,.15);
+    overflow:hidden;
+}
+header{
+    background:var(--primary);
+    color:white;
+    padding:18px;
+    text-align:center;
+}
+.screen{
+    display:none;
+    padding:18px;
+    min-height:460px;
+}
+.screen.active{
+    display:block;
+}
+button{
+    width:100%;
+    padding:10px;
+    margin-top:6px;
+    border:none;
+    border-radius:6px;
+    font-weight:bold;
+    color:white;
+    cursor:pointer;
+    background:var(--primary);
+}
+button.danger{
+    background:var(--danger);
+}
+input,select{
+    width:100%;
+    padding:8px;
+    border:2px solid #ddd;
+    border-radius:6px;
+    margin-bottom:8px;
+}
+.option{
+    border:2px solid #ccc;
+    padding:10px;
+    border-radius:6px;
+    margin:6px 0;
+    cursor:pointer;
+}
+.option.selected{
+    background:var(--primary);
+    border-color:var(--primary);
+    color:white;
+}
+.score{
+    font-size:2.5rem;
+    font-weight:bold;
+    text-align:center;
+    margin:18px 0;
+}
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:10px;
+}
+th,td{
+    border:1px solid #ccc;
+    padding:4px;
+    text-align:center;
+}
+.toggle{
+    background:#444;
+}
+</style>
+
+<!-- MUSIK AUTO PLAY -->
+<audio id="bgMusic" loop autoplay src="ala.mp3"></audio>
+
+<!-- TTS -->
+<script>
+function speak(text){
+    const bg=document.getElementById("bgMusic");
+    if(!bg.paused) bg.pause();
+
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang="id-ID";
+    u.rate=1;
+    u.onend=()=>{ bg.play(); };
+    speechSynthesis.speak(u);
+}
+</script>
+
+</head>
+<body>
+<div class="app">
+<header>
+<h2>PAI SD</h2>
+<p>3A • 3B • 4A • 4B</p>
+</header>
+<!-- END BAGIAN 1 -->
+<!-- LOGIN -->
+<div id="login" class="screen active">
+    <label>Nama Siswa:</label>
+    <input id="inputNama" type="text" placeholder="Masukkan nama">
+
+    <label>Pilih Kelas:</label>
+    <select id="inputKelas">
+        <option value="">-- Pilih Kelas --</option>
+        <option value="3A">Kelas 3A</option>
+        <option value="3B">Kelas 3B</option>
+        <option value="4A">Kelas 4A</option>
+        <option value="4B">Kelas 4B</option>
+    </select>
+
+    <small id="loginErr" style="display:none;color:red;"></small>
+
+    <button onclick="mulaiQuiz()">Mulai Quiz (10 Soal)</button>
+    <button onclick="mulaiUlangan()">Mulai Ulangan CBT (10 Soal)</button>
+    <button onclick="toggleAntiUlang()" id="btnAntiUlang">Anti Ulang: ON</button>
+    <button onclick="toggleMusik()">Musik ON/OFF</button>
+    <button onclick="openAdmin()">Menu Admin</button>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz" class="screen">
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+        <span id="quizProgress">Soal 1/?</span>
+        <span id="quizKelas" style="font-weight:bold;color:var(--primary)"></span>
+    </div>
+    <div class="question-card">
+        <div id="quizTeks" style="font-weight:bold;"></div>
+    </div>
+    <div id="quizOpsi"></div>
+    <button id="quizNext" onclick="lanjutQuiz()" disabled>Selanjutnya</button>
+</div>
+
+<!-- QUIZ DONE -->
+<div id="quizDone" class="screen">
+    <h3>Quiz Selesai!</h3>
+    <h4 id="quizNamaShow"></h4>
+    <div id="quizSkor" class="score"></div>
+    <button onclick="gotoLogin()">Kembali ke Menu</button>
+</div>
+
+<!-- ULANGAN -->
+<div id="ulangan" class="screen">
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+        <span id="ulProg">Soal 1/?</span>
+        <span id="ulKelas" style="font-weight:bold;color:var(--primary)"></span>
+    </div>
+    <div class="question-card">
+        <div id="ulTeks" style="font-weight:bold;"></div>
+    </div>
+    <div id="ulOpsi"></div>
+    <button id="ulNext" onclick="lanjutUlangan()" disabled>Selanjutnya</button>
+</div>
+
+<!-- ULANGAN DONE -->
+<div id="ulanganDone" class="screen">
+    <h3>Ulangan CBT Selesai!</h3>
+    <h4 id="ulNamaShow"></h4>
+    <div id="ulSkor" class="score"></div>
+    <button onclick="gotoLogin()">Kembali ke Menu</button>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="screen">
+    <h3>ADMIN PANEL</h3>
+
+    <div style="margin-bottom:10px;">
+        <label>Tambah Siswa:</label>
+        <input id="addNama" type="text" placeholder="Nama siswa baru">
+        <select id="addKelas">
+            <option value="3A">3A</option>
+            <option value="3B">3B</option>
+            <option value="4A">4A</option>
+            <option value="4B">4B</option>
+        </select>
+        <button onclick="tambahSiswa()">Tambah</button>
+    </div>
+
+    <div id="adminPilihKelas"></div>
+    <div id="adminKonten" style="margin-top:15px;"></div>
+
+    <button onclick="exportNilai()">Export Nilai</button>
+    <button onclick="gotoLogin()">Kembali</button>
+    <button class="danger" onclick="resetData()">RESET DATABASE</button>
+</div>
+
+<!-- END BAGIAN 2 -->
+<!-- BAGIAN 3: BANK SOAL -->
+<script>
+/* SOAL KELAS 3 — RAMADHAN */
+const soalKelas3 = [
+{q:"Bulan umat Islam wajib berpuasa adalah bulan ...",opts:["Rajab","Ramadhan","Syawal","Muharram"],a:1},
+{q:"Puasa dimulai dari waktu ...",opts:["Maghrib","Subuh","Isya","Dzuhur"],a:1},
+{q:"Puasa berakhir saat adzan ...",opts:["Isya","Ashar","Maghrib","Subuh"],a:2},
+{q:"Membaca Al-Qur'an di bulan Ramadhan disebut ...",opts:["Tadarus","Tahlil","Qiroah","Doa"],a:0},
+{q:"Shalat sunnah malam bulan Ramadhan adalah shalat ...",opts:["Dhuha","Tarawih","Tawaf","Tahajud"],a:1},
+{q:"Makan sebelum subuh saat puasa disebut ...",opts:["Sarapan","Makan malam","Sahur","Berbuka"],a:2},
+{q:"Berbuka puasa disunnahkan dengan makan ...",opts:["Kurma","Roti","Nasi","Susu"],a:0},
+{q:"Orang yang sakit boleh tidak puasa dan wajib ...",opts:["Qadha","Tidak perlu ganti","Haram ganti","Infak"],a:0},
+{q:"Zakat yang wajib saat akhir Ramadhan adalah zakat ...",opts:["Mal","Fitrah","Penghasilan","Panen"],a:1},
+{q:"Zakat fitrah diberikan kepada ...",opts:["Orang kaya","Fakir miskin","Pejabat","Guru"],a:1},
+{q:"Hari raya setelah Ramadhan adalah ...",opts:["Idul Fitri","Idul Adha","Maulid","Isra Mi'raj"],a:0},
+{q:"Puasa Ramadhan melatih kita bersikap ...",opts:["Marah","Syukur","Sombong","Curang"],a:1},
+{q:"Malam mulia di bulan Ramadhan disebut ...",opts:["Nuzulul Qur'an","Lailatul Qadar","Isra Mi'raj","Hijrah"],a:1},
+{q:"Lailatul Qadar lebih baik dari ...",opts:["Seribu bulan","Seribu tahun","Seratus tahun","Sepuluh bulan"],a:0},
+{q:"Saat puasa kita dilarang ...",opts:["Bekerja","Tidur","Makan dan minum","Belajar"],a:2},
+{q:"Perintah puasa terdapat dalam surat Al-Baqarah ayat ...",opts:["183","2","144","10"],a:0},
+{q:"Nuzulul Qur'an adalah peristiwa turunnya ...",opts:["Al-Qur'an","Hujan","Bulan","Malaikat"],a:0},
+{q:"Anak kecil yang puasa termasuk perbuatan ...",opts:["Tercela","Terpuji","Dosa","Makruh"],a:1},
+{q:"Puasa melatih kita agar sabar dan ...",opts:["Malas","Sombong","Disiplin","Sedih"],a:2},
+{q:"Berlebihan saat berbuka adalah perbuatan ...",opts:["Dilarang","Terpuji","Disunnahkan","Dianjurkan"],a:0},
+{q:"Setelah Ramadhan bulan berikutnya adalah ...",opts:["Syawal","Safar","Rajab","Muharram"],a:0},
+{q:"Puasa bertujuan menjadikan kita ...",opts:["Sombong","Bertakwa","Kaya","Putus asa"],a:1},
+{q:"Zakat fitrah harus ditunaikan sebelum ...",opts:["Shalat Jumat","Shalat Idul Fitri","Shalat Dzuhur","Shalat Tarawih"],a:1},
+{q:"Puasa berakhir saat ...",opts:["Adzan Isya","Matahari terbenam","Tidur","Adzan Ashar"],a:1},
+{q:"Lailatul Qadar terdapat pada ...",opts:["10 hari awal","10 hari akhir","Pertengahan bulan","Awal bulan"],a:1},
+{q:"Saat puasa kita menjaga ...",opts:["Mulut saja","Lisan dan perbuatan","Kaki","Telinga"],a:1},
+{q:"Berbuka puasa disebut ...",opts:["Iftar","Tarawih","Qadha","Tadarus"],a:0},
+{q:"Orang yang mampu wajib mengeluarkan ...",opts:["Zakat Fitrah","Zakat Sapi","Zakat Rumah","Zakat Panen"],a:0},
+{q:"Puasa Ramadhan wajib bagi ...",opts:["Orang sakit","Anak kecil","Orang baligh","Bayi"],a:2},
+{q:"Puasa adalah menahan diri dari ...",opts:["Makan & Minum","Bermain","Tidur","Olahraga"],a:0}
+];
+
+/* SOAL KELAS 4 — BALIGH & HIJRAH */
+const soalKelas4 = [
+{q:"Baligh artinya seorang anak sudah ...",opts:["Tidak wajib ibadah","Wajib ibadah","Tidak perlu shalat","Tidak perlu puasa"],a:1},
+{q:"Tanda baligh laki-laki adalah ...",opts:["Menstruasi","Mimpi basah","Suara merdu","Berkumis"],a:1},
+{q:"Tanda baligh perempuan adalah ...",opts:["Suara pecah","Mimpi basah","Menstruasi","Cukur rambut"],a:2},
+{q:"Setelah baligh shalat 5 waktu hukumnya ...",opts:["Sunnah","Makruh","Mubah","Wajib"],a:3},
+{q:"Puasa Ramadhan bagi yang baligh hukumnya ...",opts:["Makruh","Wajib","Mubah","Sunnah"],a:1},
+{q:"Malaikat pencatat amal disebut ...",opts:["Israfil","Raqib & Atid","Ridwan & Malik","Jibril"],a:1},
+{q:"Raqib mencatat amal ...",opts:["Buruk","Baik","Tidur","Makan"],a:1},
+{q:"Atid mencatat amal ...",opts:["Baik","Buruk","Sakit","Bangun"],a:1},
+{q:"Hijrah Nabi dari ... ke ...",opts:["Madinah ke Makkah","Makkah ke Madinah","Thaif ke Yaman","Syam ke Mesir"],a:1},
+{q:"Hijrah terjadi karena kaum muslimin disiksa oleh ...",opts:["Romawi","Quraisy","Yahudi","Nasrani"],a:1},
+{q:"Hijrah menjadi awal penanggalan ...",opts:["Masehi","Hijriah","China","Jawa"],a:1},
+{q:"Masjid pertama di Madinah adalah ...",opts:["Masjid Quba","Masjid Nabawi","Masjid Aqsa","Masjid Haram"],a:0},
+{q:"Sahabat yang menemani Nabi dalam hijrah adalah ...",opts:["Umar","Abu Bakar","Ali","Hamzah"],a:1},
+{q:"Kaum yang menyambut Nabi di Madinah disebut ...",opts:["Muhajirin","Anshar","Kuraisy","Yahudi"],a:1},
+{q:"Kaum Muhajirin adalah orang dari ...",opts:["Makkah","Madinah","Yaman","Thaif"],a:0},
+{q:"Kaum Anshar adalah orang dari ...",opts:["Makkah","Madinah","Yaman","Thaif"],a:1},
+{q:"Hijrah mengajarkan kita ...",opts:["Sombong","Tawakal & sabar","Putus asa","Menuduh"],a:1},
+{q:"Baligh berarti dicatat ...",opts:["Umur","Amal","Nilai","Tinggi"],a:1},
+{q:"Menutup aurat adalah bagian dari ...",opts:["Akhlak","Istirahat","Olahraga","Pesta"],a:0},
+{q:"Laki-laki auratnya dari ... sampai ...",opts:["Pusar - Lutut","Kepala - Kaki","Dada - Leher","Lutut - Kaki"],a:0},
+{q:"Perempuan wajib menutup aurat kecuali ...",opts:["Kaki","Tangan & Wajah","Leher","Rambut"],a:1},
+{q:"Hijrah Nabi mengajarkan pentingnya ...",opts:["Kesombongan","Persatuan","Perpecahan","Tawuran"],a:1},
+{q:"Orang baligh wajib berbakti kepada ...",opts:["Teman","Orang Tua","Tetangga","Guru"],a:1},
+{q:"Hijrah berarti ...",opts:["Tidur","Pindah","Duduk","Menangis"],a:1},
+{q:"Perpindahan hijrah disebabkan ...",opts:["Perang","Siksaan Quraisy","Perdagangan","Kekeringan"],a:1},
+{q:"Sesudah hijrah pusat Islam berada di ...",opts:["Makkah","Madinah","Thaif","Yaman"],a:1},
+{q:"Hijrah memperkuat ...",opts:["Perpecahan","Persaudaraan","Permusuhan","Kebohongan"],a:1},
+{q:"Akhlak terpuji artinya ...",opts:["Perbuatan buruk","Perbuatan baik","Perbuatan hina","Perbuatan jahat"],a:1},
+{q:"Akhlak tercela adalah ...",opts:["Jujur","Sombong","Amanah","Dermawan"],a:1},
+{q:"Orang baligh catatan amalnya akan ...",opts:["Terhapus","Dihitung","Dibuang","Dibakar"],a:1}
+];
+
+/* HELPER RANDOM */
+function acak(arr){return arr.sort(()=>Math.random()-0.5);}
+</script>
+<!-- END BAGIAN 3 -->
+<!-- BAGIAN 4: LOGIC -->
+<script>
+/* ======================
+   DATABASE LOCAL
+======================*/
+let db = JSON.parse(localStorage.getItem("paiDB") || "{}");
+let antiUlang = JSON.parse(localStorage.getItem("antiUlang") || "true");
+
+let kelasList=["3A","3B","4A","4B"];
+
+// Bikin struktur awal
+kelasList.forEach(k=>{
+    if(!db[k]) db[k]={siswa:[],quiz:[],ulangan:[],absensi:{}};
+});
+
+/* SIMPAN */
+function saveDB(){
+    localStorage.setItem("paiDB",JSON.stringify(db));
+    localStorage.setItem("antiUlang",JSON.stringify(antiUlang));
+}
+
+/* ======================
+   LOGIN
+======================*/
+let namaSiswa="", kelasSiswa="", soalAktif=[], pointer=0, nilai=0;
+
+function mulaiQuiz(){
+    let n=inputNama.value.trim();
+    let k=inputKelas.value;
+    if(!n||!k){loginErr.innerText="Nama & Kelas wajib!";loginErr.style.display="block";return;}
+
+    if(antiUlang && db[k].quiz.find(x=>x.nama===n)){
+        alert("❌ Kamu sudah pernah mengerjakan QUIZ!");
+        return;
+    }
+
+    if(!db[k].siswa.includes(n)){
+        db[k].siswa.push(n);
+        db[k].absensi[n]="";
+        saveDB();
+    }
+
+    namaSiswa=n; kelasSiswa=k;
+    soalAktif = acak((k==="3A"||k==="3B")?soalKelas3:soalKelas4).slice(0,10);
+    pointer=0; nilai=0;
+    showScreen("quiz");
+    tampilQuiz();
+}
+
+function tampilQuiz(){
+    let s=soalAktif[pointer];
+    quizProgress.innerText=`Soal ${pointer+1}/10`;
+    quizKelas.innerText=kelasSiswa;
+    quizTeks.innerText=s.q;
+    speak(s.q);
+    quizOpsi.innerHTML="";
+    quizNext.disabled=true;
+
+    s.opts.forEach((o,i)=>{
+        let div=document.createElement("div");
+        div.className="option";
+        div.innerText=o;
+        div.onclick=()=>{
+            document.querySelectorAll("#quizOpsi .option").forEach(x=>x.classList.remove("selected"));
+            div.classList.add("selected");
+            div.dataset.i=i;
+            quizNext.disabled=false;
+        };
+        quizOpsi.appendChild(div);
+    });
+}
+
+function lanjutQuiz(){
+    let pilih=document.querySelector("#quizOpsi .selected");
+    if(pilih && parseInt(pilih.dataset.i)===soalAktif[pointer].a) nilai+=10;
+    pointer++;
+    if(pointer<10) tampilQuiz(); else selesaiQuiz();
+}
+
+function selesaiQuiz(){
+    // absen otomatis
+    db[kelasSiswa].absensi[namaSiswa] = "H";
+    db[kelasSiswa].quiz.push({nama:namaSiswa,nilai,waktu:new Date().toLocaleString("id")});
+    saveDB();
+    quizNamaShow.innerText=`${namaSiswa} (${kelasSiswa})`;
+    quizSkor.innerText=nilai;
+    showScreen("quizDone");
+}
+
+/* ======================
+   ULANGAN CBT
+======================*/
+function mulaiUlangan(){
+    let n=inputNama.value.trim();
+    let k=inputKelas.value;
+    if(!n||!k){loginErr.innerText="Nama & Kelas wajib!";loginErr.style.display="block";return;}
+
+    if(antiUlang && db[k].ulangan.find(x=>x.nama===n)){
+        alert("❌ Kamu sudah pernah ULANGAN!");
+        return;
+    }
+
+    if(!db[k].siswa.includes(n)){
+        db[k].siswa.push(n);
+        db[k].absensi[n]="";
+        saveDB();
+    }
+
+    namaSiswa=n; kelasSiswa=k;
+    let pool=(k==="3A"||k==="3B")?soalKelas3:soalKelas4;
+    soalAktif = acak([...pool]).slice(0,10);
+    pointer=0; nilai=0;
+    showScreen("ulangan");
+    tampilUlangan();
+}
+
+function tampilUlangan(){
+    let s=soalAktif[pointer];
+    ulProg.innerText=`Soal ${pointer+1}/10`;
+    ulKelas.innerText=kelasSiswa;
+    ulTeks.innerText=s.q;
+    speak(s.q);
+    ulOpsi.innerHTML="";
+    ulNext.disabled=true;
+
+    s.opts.forEach((o,i)=>{
+        let div=document.createElement("div");
+        div.className="option";
+        div.innerText=o;
+        div.onclick=()=>{
+            document.querySelectorAll("#ulOpsi .option").forEach(x=>x.classList.remove("selected"));
+            div.classList.add("selected");
+            div.dataset.i=i;
+            ulNext.disabled=false;
+        };
+        ulOpsi.appendChild(div);
+    });
+}
+
+function lanjutUlangan(){
+    let pilih=document.querySelector("#ulOpsi .selected");
+    if(pilih && parseInt(pilih.dataset.i)===soalAktif[pointer].a) nilai+=10;
+    pointer++;
+    if(pointer<10) tampilUlangan(); else selesaiUlangan();
+}
+
+function selesaiUlangan(){
+    db[kelasSiswa].absensi[namaSiswa]="H";
+    db[kelasSiswa].ulangan.push({nama:namaSiswa,nilai,waktu:new Date().toLocaleString("id")});
+    saveDB();
+    ulNamaShow.innerText=`${namaSiswa} (${kelasSiswa})`;
+    ulSkor.innerText=nilai;
+    showScreen("ulanganDone");
+}
+
+/* ======================
+   ADMIN PANEL
+======================*/
+function openAdmin(){
+    let p=prompt("Password Admin:");
+    if(p!=="040698") return alert("Salah BOS!");
+    showAdminMenu();
+}
+
+function showAdminMenu(){
+    showScreen("admin");
+    adminPilihKelas.innerHTML="";
+    kelasList.forEach(k=>{
+        let b=document.createElement("button");
+        b.innerText="Kelas "+k;
+        b.onclick=()=>tampilKelas(k);
+        adminPilihKelas.appendChild(b);
+    });
+    adminKonten.innerHTML="";
+}
+
+function tampilKelas(k){
+    let d=db[k];
+
+    let html=`<h4>Daftar Siswa</h4><table><tr><th>Nama</th><th>Absensi</th></tr>`;
+    d.siswa.forEach(n=>{
+        html+=`<tr><td>${n}</td><td>${d.absensi[n]||""}</td></tr>`;
+    });
+    html+=`</table><br>`;
+
+    html+=`<h4>Absensi Manual</h4>
+    <select id="absNama"><option value="">Pilih Nama</option>`;
+    d.siswa.forEach(n=> html+=`<option>${n}</option>`);
+    html+=`</select>
+    <button onclick="absenManual('${k}','H')">H</button>
+    <button onclick="absenManual('${k}','I')">I</button>
+    <button onclick="absenManual('${k}','S')">S</button>
+    <button onclick="absenManual('${k}','A')">A</button><br><br>`;
+
+    html+=`<h4>Rekap QUIZ</h4>
+    <table><tr><th>Nama</th><th>Nilai</th><th>Waktu</th></tr>`;
+    d.quiz.forEach(r=>{
+        html+=`<tr><td>${r.nama}</td><td>${r.nilai}</td><td>${r.waktu}</td></tr>`;
+    });
+    html+=`</table><br>`;
+
+    html+=`<h4>Rekap ULANGAN</h4>
+    <table><tr><th>Nama</th><th>Nilai</th><th>Waktu</th></tr>`;
+    d.ulangan.forEach(r=>{
+        html+=`<tr><td>${r.nama}</td><td>${r.nilai}</td><td>${r.waktu}</td></tr>`;
+    });
+    html+=`</table>`;
+
+    adminKonten.innerHTML=html;
+}
+
+function absenManual(k,mode){
+    let n=document.getElementById("absNama").value;
+    if(!n) return alert("Pilih nama BOS!");
+    db[k].absensi[n]=mode;
+    saveDB();
+    tampilKelas(k);
+}
+
+/* ======================
+   TAMBAH SISWA
+======================*/
+function tambahSiswa(){
+    let n=addNama.value.trim();
+    let k=addKelas.value;
+    if(!n) return alert("Isi nama terlebih dahulu!");
+    if(db[k].siswa.includes(n)) return alert("Nama sudah ada!");
+    db[k].siswa.push(n);
+    db[k].absensi[n]="";
+    addNama.value="";
+    saveDB();
+    tampilKelas(k);
+}
+
+/* ======================
+   EXPORT CSV
+======================*/
+function exportNilai(){
+    let rows=["Kelas,Nama,Quiz,Ulangan"];
+    kelasList.forEach(k=>{
+        db[k].siswa.forEach(n=>{
+            let q=db[k].quiz.find(x=>x.nama===n);
+            let u=db[k].ulangan.find(x=>x.nama===n);
+            rows.push(`${k},${n},${q?q.nilai:""},${u?u.nilai:""}`);
+        });
+    });
+    let blob=new Blob([rows.join("\n")],{type:"text/csv"});
+    let a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="rekap_pai.csv";
+    a.click();
+}
+
+/* ======================
+   MUSIK + TOOLS
+======================*/
+function toggleMusik(){
+    const m=document.getElementById("bgMusic");
+    if(m.paused){m.play();}else{m.pause();}
+}
+
+function toggleAntiUlang(){
+    antiUlang=!antiUlang;
+    saveDB();
+    btnAntiUlang.innerText=`Anti Ulang: ${antiUlang?"ON":"OFF"}`;
+}
+
+function showScreen(s){
+    document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));
+    document.getElementById(s).classList.add("active");
+}
+
+function gotoLogin(){
+    showScreen("login");
+}
+
+function resetData(){
+    if(confirm("Hapus semua data?")){
+        localStorage.removeItem("paiDB");
+        localStorage.removeItem("antiUlang");
+        location.reload();
+    }
+}
+</script>
+</div>
+</body>
+</html>
