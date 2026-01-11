@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kuis & Absensi PAI SD</title>
+
+<!-- EXPORT EXCEL -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+:root{
+  --primary:#2E8B57;
+  --light:#F0FFF0;
+  --danger:#e74c3c;
+  --white:#fff;
+}
+*{
+  margin:0;padding:0;box-sizing:border-box;
+  font-family:'Segoe UI',sans-serif;
+}
+body{
+  background:var(--light);
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  min-height:100vh;
+  padding:20px;
+}
+.app{
+  background:var(--white);
+  width:100%;
+  max-width:900px;
+  border-radius:12px;
+  box-shadow:0 5px 20px rgba(0,0,0,.2);
+  overflow:hidden;
+}
+header{
+  background:var(--primary);
+  color:#fff;
+  padding:18px;
+  text-align:center;
+  font-weight:bold;
+  font-size:1.2rem;
+}
+.screen{display:none;padding:20px;}
+.screen.active{display:block;}
+button{
+  width:100%;padding:12px;font-weight:bold;
+  color:#fff;background:var(--primary);
+  border:none;border-radius:8px;margin-top:10px;cursor:pointer;
+}
+.btn-danger{background:var(--danger);}
+input,select{
+  width:100%;padding:10px;border:2px solid #ccc;
+  border-radius:8px;margin-top:5px;
+}
+.scrollBox{
+  max-height:400px;overflow-y:auto;margin-top:10px;
+}
+table{
+  border-collapse:collapse;margin-top:10px;font-size:.8rem;width:100%;
+}
+th,td{
+  border:1px solid #bbb;padding:5px;text-align:center;
+}
+th{background:var(--primary);color:#fff;}
+.statusRow{
+  display:flex;justify-content:space-between;align-items:center;
+  border:1px solid #ccc;padding:8px;margin:5px 0;border-radius:6px;
+}
+.absenBtn{
+  padding:6px 8px;margin:2px;color:#fff;border-radius:4px;
+  cursor:pointer;font-size:.8rem;
+}
+.h{background:#2ecc71;} .i{background:#f1c40f;}
+.s{background:#3498db;} .a{background:#e74c3c;}
+.question-card{
+  background:#fafafa;padding:15px;border-left:4px solid gold;
+  margin:10px 0;border-radius:8px;
+}
+.option{
+  border:2px solid #ccc;padding:10px;border-radius:8px;
+  margin:8px 0;cursor:pointer;
+}
+.option.selected{background:var(--primary);color:#fff;border-color:var(--primary);}
+.score-circle{
+  width:140px;height:140px;border-radius:50%;
+  background:var(--primary);color:#fff;
+  display:flex;justify-content:center;align-items:center;
+  font-size:2.5rem;margin:15px auto;
+}
+.tr-gold{background:gold;color:black;font-weight:bold;}
+.tr-green{background:#2ecc71;color:white;}
+.tr-orange{background:orange;color:white;}
+.tr-red{background:#e74c3c;color:white;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>KUIS & ABSENSI PAI SD</header>
+
+<!-- ================= LOGIN ================= -->
+<div id="login" class="screen active">
+
+  <div style="width:130px;height:130px;border-radius:50%;border:4px solid var(--primary);margin:15px auto;"></div>
+
+  <h3 style="text-align:center;">LOGIN</h3>
+
+  <label>Nama</label>
+  <input id="studentName" autocomplete="off">
+
+  <label style="margin-top:8px;">Kelas</label>
+  <select id="studentClass">
+    <option disabled selected>Pilih Kelas</option>
+    <option>3A</option>
+    <option>3B</option>
+    <option>4A</option>
+    <option>4B</option>
+  </select>
+
+  <small id="loginError" style="color:red;display:none;"></small>
+
+  <button onclick="startQuiz()">Mulai Kuis</button>
+  <button onclick="openAdmin()">Admin</button>
+  <button onclick="toggleMusic()">Musik</button>
+
+</div>
+<!-- ================= QUIZ ================= -->
+<div id="quiz" class="screen">
+
+  <div style="display:flex;justify-content:space-between;">
+    <span id="progress"></span>
+    <span id="kelasTag" style="color:var(--primary);font-weight:bold;"></span>
+  </div>
+
+  <!-- Timer -->
+  <div id="timer" style="font-size:18px;color:red;font-weight:bold;text-align:right;margin-top:5px;"></div>
+
+  <!-- Pertanyaan -->
+  <div class="question-card">
+    <div id="questionText"></div>
+  </div>
+
+  <!-- Opsi jawaban -->
+  <div id="options"></div>
+
+  <button id="nextBtn" onclick="nextQuestion()" disabled>Selanjutnya</button>
+</div>
+
+<!-- ================= RESULT ================= -->
+<div id="result" class="screen">
+  <h3 style="text-align:center;">Kuis Selesai!</h3>
+  <h4 id="nameResult" style="text-align:center;"></h4>
+  <div id="scoreBox" class="score-circle"></div>
+  <button onclick="restart()">Kembali Awal</button>
+</div>
+<!-- ================= MENU ADMIN ================= -->
+<div id="menuAdmin" class="screen">
+  <h3 style="text-align:center;">MENU ADMIN</h3>
+
+  <button onclick="showScreen('inputNama')">Input Nama Siswa</button>
+  <button onclick="loadAbsensi()">Input Absensi</button>
+  <button onclick="loadRekapAbsensi()">Rekap Absensi</button>
+  <button onclick="loadRekapNilai()">Rekap Nilai</button>
+
+  <!-- Export Excel -->
+  <button onclick="exportNilai()">Export Nilai (Excel)</button>
+  <button onclick="exportAbsensi()">Export Absensi (Excel)</button>
+
+  <!-- Repeat Mode -->
+  <button onclick="toggleRepeat()">Mode Ulang Kuis: <span id="repeatLabel"></span></button>
+
+  <!-- Cek Hodam -->
+  <button onclick="showScreen('hodamScreen')">Cek Hodam</button>
+
+  <button class="btn-danger" onclick="resetSemua()">Reset Semua Data</button>
+  <button onclick="showScreen('login')">Kembali</button>
+</div>
+<!-- ================= INPUT NAMA SISWA ================= -->
+<div id="inputNama" class="screen">
+  <h3 style="text-align:center;">INPUT NAMA</h3>
+
+  <input id="namaInput" placeholder="Nama Siswa" autocomplete="off">
+
+  <select id="kelasInput">
+    <option disabled selected>Pilih Kelas</option>
+    <option>3A</option>
+    <option>3B</option>
+    <option>4A</option>
+    <option>4B</option>
+  </select>
+
+  <button onclick="simpanNama()">Simpan Nama</button>
+  <button onclick="showScreen('menuAdmin')">Kembali</button>
+
+  <div class="scrollBox" id="listNamaBox"></div>
+</div>
+
+<!-- ================= ABSENSI ================= -->
+<div id="absenScreen" class="screen">
+  <h3 style="text-align:center;">ABSENSI HARI <span id="hariSpan"></span></h3>
+
+  <div class="scrollBox" id="absenWrapper"></div>
+
+  <button onclick="hariBerikutnya()">Hari Berikutnya →</button>
+  <button onclick="showScreen('menuAdmin')">Kembali</button>
+</div>
+<!-- ================= REKAP ABSENSI ================= -->
+<div id="rekapAbsenScreen" class="screen">
+  <h3 style="text-align:center;">REKAP ABSENSI</h3>
+
+  <div class="scrollBox" id="rekapAbsenWrapper"></div>
+
+  <button onclick="showScreen('menuAdmin')">Kembali</button>
+</div>
+
+<!-- ================= REKAP NILAI ================= -->
+<div id="rekapNilaiScreen" class="screen">
+  <h3 style="text-align:center;">REKAP NILAI</h3>
+
+  <div class="scrollBox" id="rekapNilaiWrapper"></div>
+
+  <button onclick="showScreen('menuAdmin')">Kembali</button>
+</div>
+<!-- ================= CEK HODAM ================= -->
+<div id="hodamScreen" class="screen">
+  <h3 style="text-align:center;">CEK HODAM</h3>
+
+  <input id="hodamInput" placeholder="Masukkan Nama..." autocomplete="off">
+
+  <button onclick="cekHodam()">Cek Hodam!</button>
+
+  <div id="hodamOutput" style="margin-top:15px;font-weight:bold;font-size:1rem;color:var(--primary);"></div>
+
+  <h4 style="margin-top:15px;">Riwayat:</h4>
+
+  <div class="scrollBox" id="hodamHistory"></div>
+
+  <button onclick="clearHodam()">Hapus Riwayat</button>
+  <button onclick="showScreen('menuAdmin')">Kembali</button>
+</div>
+<!-- ================= POOL SOAL KELAS 3 ================= -->
+<script>
+const pool3 = [
+  {q:"Bulan Ramadhan adalah bulan penuh?", opts:["Musibah","Berkah","Duka","Dosa"], a:1},
+  {q:"Puasa Ramadhan hukumnya bagi Muslim yang mampu adalah?", opts:["Sunnah","Makruh","Wajib","Mubah"], a:2},
+  {q:"Puasa dimulai dari terbit?", opts:["Matahari","Fajar/Subuh","Dzuhur","Isya"], a:1},
+  {q:"Puasa selesai saat?", opts:["Subuh","Dzuhur","Ashar","Maghrib"], a:3},
+  {q:"Hari raya setelah Ramadhan adalah?", opts:["Idul Fitri","Idul Adha","Maulid Nabi","Tahun Baru"], a:0},
+  {q:"Sholat tarawih dikerjakan setelah sholat?", opts:["Subuh","Dzuhur","Ashar","Isya"], a:3},
+  {q:"Bulan Ramadhan adalah bulan turunnya?", opts:["Al-Qur'an","Zabur","Injil","Taurat"], a:0},
+  {q:"Zakat fitrah diberikan kepada?", opts:["Orang kaya","Fakir miskin","Guru","Anak kecil"], a:1},
+  {q:"Berbuka puasa disunnahkan dengan?", opts:["Kurma","Roti","Kopi","Air panas"], a:0},
+  {q:"Tarawih biasanya dikerjakan secara?", opts:["Sendiri","Berjamaah","Berlari","Tidur"], a:1}
+];
+</script>
+<!-- ================= POOL SOAL KELAS 4 ================= -->
+<script>
+const pool4 = [
+  {q:"Balig artinya mencapai usia?", opts:["Anak-anak","Tanggung jawab","Lanjut usia","Bayu"], a:1},
+  {q:"Balig pada laki-laki ditandai dengan?", opts:["Haidh","Mimpi basah","Sunat","Botak"], a:1},
+  {q:"Balig pada perempuan ditandai dengan?", opts:["Haidh","Sakit","Tidur","Bermain"], a:0},
+  {q:"Setelah balig seorang muslim wajib?", opts:["Shalat","Main","Tidur","Bolos"], a:0},
+  {q:"Usia balig biasanya sekitar umur?", opts:["1-2","5-7","9-15","20-30"], a:2},
+  {q:"Tanda balig lainnya adalah mulai tumbuh?", opts:["Sayap","Bulu halus","Sisisk","Tanduk"], a:1},
+  {q:"Balig membuat seseorang wajib berpuasa di bulan?", opts:["Rajab","Ramadhan","Dzulhijjah","Syawal"], a:1},
+  {q:"Balig menjadikan ibadah seseorang menjadi?", opts:["Batal","Wajib","Tidak sah","Sunnah"], a:1},
+  {q:"Haidh terjadi pada anak perempuan saat masuk masa?", opts:["Balita","Balig","Lansia","Bayi"], a:1},
+  {q:"Mimpi basah pada laki-laki menandakan?", opts:["Balig","Sakit","Sedih","Lelah"], a:0}
+];
+</script>
+<script>
+/* ================= BASE DATA ================= */
+let siswa = JSON.parse(localStorage.getItem("siswaPai") || "{}");
+let absensi = JSON.parse(localStorage.getItem("absensiPai") || "{}");
+let nilai = JSON.parse(localStorage.getItem("nilaiPai") || "[]");
+let hari = parseInt(localStorage.getItem("hariPai") || "1");
+let repeatMode = localStorage.getItem("repeatMode") === "true";
+
+/* QUIZ VAR */
+let current = [];
+let index = 0;
+let score = 0;
+let student = "";
+let kelas = "";
+
+/* TIMER */
+let timeLeft = 300;
+let timerInterval = null;
+
+/* SPEECH */
+const synth = window.speechSynthesis;
+function speak(t){
+  synth.cancel();
+  let u=new SpeechSynthesisUtterance(t);
+  u.lang="id-ID";u.rate=0.9;
+  synth.speak(u);
+}
+
+/* ================= START QUIZ ================= */
+function startQuiz(){
+  let n = studentName.value.trim();
+  let k = studentClass.value;
+
+  loginError.style.display="none";
+  if(!n || !k){
+    loginError.innerText="Lengkapi data!";
+    loginError.style.display="block";
+    return;
+  }
+
+  if(!repeatMode && nilai.some(x=>x.name===n && x.class===k)){
+    loginError.innerText="Sudah mengerjakan!";
+    loginError.style.display="block";
+    return;
+  }
+
+  student=n; kelas=k;
+  kelasTag.innerText="Kelas "+k;
+
+  if(!siswa[k]) siswa[k]=[];
+  if(!siswa[k].includes(n)) siswa[k].push(n);
+
+  if(!absensi[k]) absensi[k]={};
+  if(!absensi[k][n]) absensi[k][n]=Array(30).fill("");
+  absensi[k][n][hari-1]="H";
+
+  saveAll();
+
+  const pool=(k==="3A"||k==="3B")?pool3:pool4;
+  current=shuffle([...pool]).slice(0,10);
+
+  index=0;score=0;
+  startTimer();
+  showQuestion();
+  showScreen('quiz');
+}
+
+/* ================= SHOW QUESTION ================= */
+function showQuestion(){
+  const q=current[index];
+  progress.innerText=`Soal ${index+1}/${current.length}`;
+  questionText.innerText=q.q;
+  speak(q.q);
+
+  options.innerHTML="";
+  nextBtn.disabled=true;
+
+  q.opts.forEach((o,i)=>{
+    let d=document.createElement("div");
+    d.className="option";
+    d.innerText=o;
+    d.onclick=()=>select(i,d);
+    options.appendChild(d);
+  });
+}
+
+function select(i,el){
+  document.querySelectorAll(".option").forEach(e=>e.classList.remove("selected"));
+  el.classList.add("selected");
+  el.dataset.choice=i;
+  nextBtn.disabled=false;
+}
+
+function nextQuestion(){
+  let c=document.querySelector(".option.selected").dataset.choice;
+  if(c==current[index].a) score+=10;
+  index++;
+  (index<current.length)?showQuestion():finishQuiz();
+}
+
+/* ================= FINISH QUIZ ================= */
+function finishQuiz(){
+  clearInterval(timerInterval);
+  nilai.push({
+    name:student,class:kelas,score,
+    time:new Date().toLocaleString("id-ID")
+  });
+  saveAll();
+  nameResult.innerText=`${student} (${kelas})`;
+  scoreBox.innerText=score;
+  showScreen('result');
+}
+
+/* ================= TIMER ================= */
+function startTimer(){
+  timeLeft=300;
+  updateTimer();
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    updateTimer();
+    if(timeLeft<=0){
+      clearInterval(timerInterval);
+      finishQuiz();
+    }
+  },1000);
+}
+function updateTimer(){
+  let m=Math.floor(timeLeft/60),s=timeLeft%60;
+  timer.innerText=`⏳ ${m}:${('0'+s).slice(-2)}`;
+}
+
+/* ================= ADMIN LOGIN ================= */
+function openAdmin(){
+  let p=prompt("Sandi Admin:");
+  if(p==="040698") showScreen('menuAdmin');
+  else alert("Sandi salah!");
+}
+
+/* ================= INPUT NAMA ================= */
+function simpanNama(){
+  let nama=namaInput.value.trim();
+  let k=kelasInput.value;
+  if(!nama||!k) return alert("Lengkapi!");
+  if(!siswa[k]) siswa[k]=[];
+  if(!siswa[k].includes(nama)) siswa[k].push(nama);
+  if(!absensi[k]) absensi[k]={};
+  if(!absensi[k][nama]) absensi[k][nama]=Array(30).fill("");
+  saveAll();
+  loadListNama();
+  namaInput.value="";kelasInput.value="";
+}
+
+function loadListNama(){
+  listNamaBox.innerHTML="";
+  for(let k in siswa){
+    listNamaBox.innerHTML+=`<b>${k}</b><br>`;
+    siswa[k].forEach(n=>listNamaBox.innerHTML+=`• ${n}<br>`);
+    listNamaBox.innerHTML+="<br>";
+  }
+}
+
+/* ================= ABSENSI ================= */
+function loadAbsensi(){
+  if(!Object.keys(siswa).length) return alert("Belum ada siswa!");
+  hariSpan.innerText=hari;
+  absenWrapper.innerHTML="";
+  for(let k in siswa){
+    absenWrapper.innerHTML+=`<h3 style="color:var(--primary);">${k}</h3>`;
+    siswa[k].forEach(n=>{
+      absenWrapper.innerHTML+=`
+      <div class="statusRow">
+        ${n}
+        <div>
+          <button class="absenBtn h" onclick="setStat('${k}','${n}','H')">H</button>
+          <button class="absenBtn i" onclick="setStat('${k}','${n}','I')">I</button>
+          <button class="absenBtn s" onclick="setStat('${k}','${n}','S')">S</button>
+          <button class="absenBtn a" onclick="setStat('${k}','${n}','A')">A</button>
+        </div>
+        ${absensi[k][n][hari-1]||'-'}
+      </div>`;
+    });
+  }
+  showScreen('absenScreen');
+}
+function setStat(k,n,s){absensi[k][n][hari-1]=s;saveAll();loadAbsensi();}
+function hariBerikutnya(){if(hari<30){hari++;saveAll();loadAbsensi();}else alert("30 hari selesai!");}
+
+/* ================= REKAP ABSENSI ================= */
+function loadRekapAbsensi(){
+  rekapAbsenWrapper.innerHTML="";
+  for(let k in siswa){
+    let html=`<h3 style="color:var(--primary);">${k}</h3>
+    <div style="overflow-x:auto;"><table><thead><tr><th>Nama</th>`;
+    for(let i=1;i<=30;i++) html+=`<th>${i}</th>`;
+    html+=`</tr></thead><tbody>`;
+    siswa[k].forEach(n=>{
+      html+=`<tr><td>${n}</td>`;
+      absensi[k][n].forEach(v=>html+=`<td>${v||'-'}</td>`);
+      html+=`</tr>`;
+    });
+    html+=`</tbody></table></div>`;
+    rekapAbsenWrapper.innerHTML+=html;
+  }
+  showScreen('rekapAbsenScreen');
+}
+
+/* ================= REKAP NILAI ================= */
+function loadRekapNilai(){
+  rekapNilaiWrapper.innerHTML="";
+  ["3A","3B","4A","4B"].forEach(k=>{
+    let f=nilai.filter(x=>x.class===k);
+    if(!f.length)return;
+    f.sort((a,b)=>b.score-a.score);
+    let high=f[0].score;
+    let html=`<h3 style="color:var(--primary);">${k} — Highscore: ${high}</h3>
+    <div style="overflow-x:auto;"><table><thead><tr>
+    <th>No</th><th>Nama</th><th>Nilai</th><th>Waktu</th></tr></thead><tbody>`;
+    f.forEach((x,i)=>{
+      let cls=x.score===high?'tr-gold':x.score>=80?'tr-green':x.score>=60?'tr-orange':'tr-red';
+      html+=`<tr class="${cls}"><td>${i+1}</td><td>${x.name}</td><td>${x.score}</td><td>${x.time}</td></tr>`;
+    });
+    html+=`</tbody></table></div>`;
+    rekapNilaiWrapper.innerHTML+=html;
+  });
+  showScreen('rekapNilaiScreen');
+}
+
+/* ================= EXPORT EXCEL ================= */
+function exportNilai(){
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(nilai);
+  XLSX.utils.book_append_sheet(wb,ws,"Nilai");
+  XLSX.writeFile(wb,"rekap_nilai.xlsx");
+}
+function exportAbsensi(){
+  const wb=XLSX.utils.book_new();
+  let data=[];
+  for(let k in absensi){
+    for(let n in absensi[k]){
+      data.push({kelas:k,nama:n,status:absensi[k][n].join(",")});
+    }
+  }
+  const ws=XLSX.utils.json_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb,ws,"Absensi");
+  XLSX.writeFile(wb,"rekap_absen.xlsx");
+}
+
+/* ================= CEK HODAM ================= */
+let hodamList=[
+"maung hitam","maung putih","aura hitam","aura putih","kadal","pariuk","panci",
+"oncom","tempe","tahu","pemalas","rajin ibadah","soleh","solehah",
+"jomblo hepy","jomblo gak punya uang","cacing","kekenceng","suka molor",
+"suka judi","suka maling","suka keluyuran tengah malam"
+];
+
+function cekHodam(){
+  let nama=hodamInput.value.trim();
+  if(!nama) return;
+  let hist=JSON.parse(localStorage.getItem("hodHist")||"[]");
+  let exist=hist.find(h=>h.nama.toLowerCase()===nama.toLowerCase());
+  let hasil;
+  if(exist){hasil=exist.hasil;}
+  else{
+    hasil=hodamList[Math.floor(Math.random()*hodamList.length)];
+    hist.push({nama,hasil,time:new Date().toLocaleString("id-ID")});
+    localStorage.setItem("hodHist",JSON.stringify(hist));
+  }
+  hodamOutput.innerText=`${nama} → ${hasil}`;
+  speak(`${nama} hodam kamu adalah ${hasil}`);
+  loadHodamHistory();
+}
+function loadHodamHistory(){
+  let box=hodamHistory;
+  box.innerHTML="";
+  let hist=JSON.parse(localStorage.getItem("hodHist")||"[]");
+  hist.slice().reverse().forEach(h=>{
+    box.innerHTML+=`• ${h.nama} → ${h.hasil} (${h.time})<br>`;
+  });
+}
+function clearHodam(){
+  localStorage.removeItem("hodHist");
+  loadHodamHistory();
+}
+
+/* ================= REPEAT MODE ================= */
+function toggleRepeat(){
+  repeatMode=!repeatMode;
+  localStorage.setItem("repeatMode",repeatMode);
+  updateRepeatLabel();
+}
+function updateRepeatLabel(){repeatLabel.innerText=repeatMode?"ON":"OFF";}
+updateRepeatLabel();
+
+/* ================= UTIL ================= */
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  if(id==="hodamScreen") loadHodamHistory();
+}
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function saveAll(){
+  localStorage.setItem("siswaPai",JSON.stringify(siswa));
+  localStorage.setItem("absensiPai",JSON.stringify(absensi));
+  localStorage.setItem("nilaiPai",JSON.stringify(nilai));
+  localStorage.setItem("hariPai",hari);
+}
+function restart(){location.reload();}
+function resetSemua(){
+  if(confirm("Reset semua data?")){
+    localStorage.clear();
+    siswa={};absensi={};nilai=[];hari=1;
+    alert("Sudah direset!");
+    restart();
+  }
+}
+
+/* ================= MUSIC ================= */
+function toggleMusic(){
+  const bg=document.getElementById('bgm');
+  if(bg.paused) bg.play(); else bg.pause();
+}
+</script>
+
+<audio id="bgm" src="ala.mp3" preload="auto"></audio>
+
+</body>
+</html>
